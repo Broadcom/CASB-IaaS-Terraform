@@ -1,13 +1,16 @@
 This Document is to run terraform and deploy resources in GCP environment when user wants to onboard one or
-more GCP Projects
+more GCP Org
 
 Pre-requisites
 On your local machine from where you want to run the terraform, you have to install following things:
 1. Terraform Installation - https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 2. Install and configure gcloud - Set up Application Default Credentials for your gcp_project_id.
 3. User running the terraform should have following permissions to
-    a. Create Resources like: Role\ServiceAccount\LogSink\PubSubTopic\PubSub Subscription
-    b. Add binding like: Role and Service Account\Service Account and BroadcomServiceAccount\publisher Role to PubSub Topic
+    a. Create Resources on Org like: Role\LogSink
+    b. Create Resources on Project like: ServiceAccount\PubSubTopic\PubSub Subscription
+    c. Add binding like: Role and Service Account\Service Account and BroadcomServiceAccount\publisher Role to PubSub Topic
+    Note: Here is the document with details of permissions needed
+    https://techdocs.broadcom.com/us/en/symantec-security-software/information-security/symantec-cloudsoc/cloud/securlets-home/about-the-gcp-securlet/onboarding-one-or-more-gcp-projects-.html
 
 Steps:
 
@@ -27,13 +30,15 @@ Steps:
 2. Terraform files - Update variables
     Goto variable.tf file and replace these variables
     Update default values for following variables
-        a. gcp_project_id
-        b. region
-        c. cloudSocConnectionId
-        d. cloudSocWebhookUrl
-        e. cloudSocPerpetualToken
-        f. cloudSocTenantId
-        g. broadcomScanAccount
+        a. gcp_project_id //The GCP Project where the Pubsub Topic/Subscription service account is created.
+        b. gcp_org_id   //The numeric GCP Organization identifier that must be configured.
+        c. region
+        d. cloudSocConnectionId
+        e. cloudSocWebhookUrl
+        f. cloudSocPerpetualToken
+        g. cloudSocTenantId
+        h. broadcomScanAccount
+
 
 3. Run Terraform
     Once you have made the above changes then goto you local box command prompt

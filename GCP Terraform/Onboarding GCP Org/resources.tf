@@ -4,10 +4,11 @@ provider "google" {
   region  = var.region
 }
 
-// Create Cloud Soc Role
-resource "google_project_iam_custom_role" "createCustomRole" {
-  role_id     = "${var.cloudSocTenantId}_role"
+// Create Cloud Soc Role 
+resource "google_organization_iam_custom_role" "createCustomRole" {
+  role_id     = "${var.cloudSocTenantId}_${var.gcp_org_id}_role"
   title       = "${var.cloudSocDataCollectionRoleTitle}-${var.cloudSocTenantId}"
+  org_id      = var.gcp_org_id
   description = var.cloudSocDataCollectionRoleDescription
   permissions = var.cloudSocDataCollectionRolePermissions
 }
@@ -28,13 +29,13 @@ resource "google_project_service" "enableAPIService" {
 
 //PubsubTopic
 resource "google_pubsub_topic" "createLogSinkPubSubTopics" {
-  name = "${var.cloudSocTenantId}-topic"
+  name = "${var.cloudSocTenantId}-${var.gcp_org_id}-topic"
 
 }
 
 //PubsubSubscription
 resource "google_pubsub_subscription" "createPubSubSubscription" {
-  name  = "${var.cloudSocTenantId}-subscription"
+  name  = "${var.cloudSocTenantId}-${var.gcp_org_id}-subscription"
   topic = google_pubsub_topic.createLogSinkPubSubTopics.id
   expiration_policy {
     ttl = ""
@@ -46,14 +47,16 @@ resource "google_pubsub_subscription" "createPubSubSubscription" {
 }
 
 //log-sink
-resource "google_logging_project_sink" "createLogSink" {
-  name        = "${var.cloudSocTenantId}-sink"
-  destination = "pubsub.googleapis.com/${google_pubsub_topic.createLogSinkPubSubTopics.id}"
-  filter      = var.logSinkFilter
-  description = var.logSinkDescription
+resource "google_logging_organization_sink" "createLogSink" {
+  name             = "${var.cloudSocTenantId}-${var.gcp_org_id}-sink"
+  destination      = "pubsub.googleapis.com/${google_pubsub_topic.createLogSinkPubSubTopics.id}"
+  filter           = var.logSinkFilter
+  description      = var.logSinkDescription
+  org_id           = var.gcp_org_id
+  include_children = true
 }
 
-//Assign User Access to ServiceAccount
+//Assign User Access to ServiceAccount 
 resource "google_service_account_iam_binding" "assignUsersAccessToServiceAccount" {
   service_account_id = google_service_account.createServiceAccount.name
   role               = "roles/iam.serviceAccountTokenCreator"
@@ -63,19 +66,22 @@ resource "google_service_account_iam_binding" "assignUsersAccessToServiceAccount
   ]
 }
 
-//Assign Cloud Soc Role to ServiceAccount
-resource "google_project_iam_member" "assignRolesToServiceAccount" {
-  project = var.gcp_project
-  role    = "projects/${var.gcp_project}/roles/${var.cloudSocTenantId}_role"
-  member  = "serviceAccount:${var.cloudSocTenantId}@${var.gcp_project}.iam.gserviceaccount.com"
+//Assign Cloud Soc Role to ServiceAccount 
+resource "google_organization_iam_binding" "assignRolesToServiceAccount" {
+  org_id = var.gcp_org_id
+  role   = "organizations/${var.gcp_org_id}/roles/${var.cloudSocTenantId}_${var.gcp_org_id}_role"
+
+  members = [
+    "serviceAccount:${var.cloudSocTenantId}@${var.gcp_project}.iam.gserviceaccount.com"
+  ]
 }
 
 //PubsubTopic Binding
-resource "google_pubsub_topic_iam_binding" "binding" {
+resource "google_pubsub_topic_iam_binding" "bindingTopicToWriterIdentity" {
   project = var.gcp_project
   topic   = google_pubsub_topic.createLogSinkPubSubTopics.id
   role    = "roles/pubsub.publisher"
   members = [
-    google_logging_project_sink.createLogSink.writer_identity
+    google_logging_organization_sink.createLogSink.writer_identity
   ]
 }
